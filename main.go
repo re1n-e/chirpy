@@ -34,11 +34,13 @@ func main() {
 	mux.Handle("/app/", http.StripPrefix("/app/", wrappedFS))
 
 	assetsFS := http.FileServer(http.Dir(assetsPath))
-	mux.Handle("/app/assets/", http.StripPrefix("/app/assets/", assetsFS))
+	wrappedAssetFs := cfg.middlewareMetricsInc(assetsFS)
+	mux.Handle("/app/assets/", http.StripPrefix("/app/assets/", wrappedAssetFs))
 
-	mux.HandleFunc("GET /healthz", readiness)
-	mux.HandleFunc("GET /metrics", cfg.handleMetric)
-	mux.HandleFunc("POST /reset", cfg.handleReset)
+	mux.HandleFunc("GET /api/healthz", readiness)
+	mux.HandleFunc("GET /admin/metrics", cfg.handleMetric)
+	mux.HandleFunc("POST /admin/reset", cfg.handleReset)
+	mux.HandleFunc("POST /api/validate_chirp", cfg.validateChirp)
 
 	srv := &http.Server{
 		Addr:    ":" + port,
