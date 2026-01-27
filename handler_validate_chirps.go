@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 func (cfg *apiConfig) validateChirp(w http.ResponseWriter, r *http.Request) {
@@ -25,10 +26,28 @@ func (cfg *apiConfig) validateChirp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type Resp struct {
-		Valid bool `json:"valid"`
+		Valid        bool   `json:"valid"`
+		Cleaned_Body string `json:"cleaned_body"`
 	}
 
 	respondWithJSON(w, 200, Resp{
-		Valid: true,
+		Valid:        true,
+		Cleaned_Body: cleanse_chirp(chirp.Body),
 	})
+}
+
+func cleanse_chirp(msg string) string {
+	tokens := strings.Fields(msg)
+	for i, token := range tokens {
+		switch strings.ToLower(token) {
+		case "kerfuffle":
+			fallthrough
+		case "sharbert":
+			fallthrough
+		case "fornax":
+			tokens[i] = "****"
+		default:
+		}
+	}
+	return strings.Join(tokens, " ")
 }
