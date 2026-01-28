@@ -22,6 +22,17 @@ func (cfg *apiConfig) handleMetric(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, metric(int(cfg.fileserverHits.Load())))
 }
 
-func (cfg *apiConfig) handleReset(_ http.ResponseWriter, _ *http.Request) {
+func (cfg *apiConfig) handleReset(w http.ResponseWriter, r *http.Request) {
+	if cfg.platform != "dev" {
+		respondWithError(w, 403, "Forbidden Request")
+		return
+	}
 	cfg.fileserverHits.Store(0)
+	if err := cfg.query.ResetDb(r.Context()); err != nil {
+		msg := fmt.Sprintf("Failed to reset db: %v", err)
+		respondWithError(w, http.StatusInternalServerError, msg)
+		return
+	}
+
+	respondWithJSON(w, 200, "db sucessfully reseted")
 }
