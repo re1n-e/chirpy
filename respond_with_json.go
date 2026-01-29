@@ -2,17 +2,18 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
-func respondWithError(w http.ResponseWriter, code int, msg string) {
+func respondWithError(w http.ResponseWriter, code int, err error, msg string) {
 	type Error struct {
 		Err string `json:"error"`
 	}
-	err := Error{
-		Err: msg,
+	errMsg := Error{
+		Err: fmt.Sprintf("%s: %v", msg, err),
 	}
-	respondWithJSON(w, code, err)
+	respondWithJSON(w, code, errMsg)
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
