@@ -1,6 +1,7 @@
 package main
 
 import (
+	"chirpy/internal/auth"
 	"chirpy/internal/database"
 	"encoding/json"
 	"net/http"
@@ -19,9 +20,20 @@ type Chirp struct {
 }
 
 func (cfg *apiConfig) createChirps(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, 404, err, "Failed to get bearer token")
+		return
+	}
+
+	validatedId, err := auth.ValidateJWT(token, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, err, "Failed to validate jwt")
+		return
+	}
+
 	type Params struct {
 		Body   string `json:"body"`
-		UserId string `json:"user_id"`
 	}
 
 	param := Params{}
@@ -37,15 +49,9 @@ func (cfg *apiConfig) createChirps(w http.ResponseWriter, r *http.Request) {
 
 	param.Body = cleanse_chirp(param.Body)
 
-	userId, err := uuid.Parse(param.UserId)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, err, "failed to parse user id")
-		return
-	}
-
 	dbChirp, err := cfg.query.CreateChirp(r.Context(), database.CreateChirpParams{
 		Body:   param.Body,
-		UserID: userId,
+		UserID: validatedId,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err, "failed to create db for chirp")

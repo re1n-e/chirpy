@@ -7,9 +7,7 @@ import (
 	"net/http"
 	"os"
 	"sync/atomic"
-	"time"
 
-	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
@@ -18,6 +16,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	query          *database.Queries
 	platform       string
+	jwtSecret      string
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -25,13 +24,6 @@ func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 		cfg.fileserverHits.Add(1)
 		next.ServeHTTP(w, r)
 	})
-}
-
-type User struct {
-	ID        uuid.UUID `json:"id"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Email     string    `json:"email"`
 }
 
 func main() {
@@ -45,6 +37,11 @@ func main() {
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("Failed to load db: %v", err)
+	}
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatalf("failed to load jwt secret")
 	}
 
 	platform := os.Getenv("PLATFORM")
@@ -61,6 +58,7 @@ func main() {
 		fileserverHits: atomic.Int32{},
 		query:          dbQueries,
 		platform:       platform,
+		jwtSecret:      jwtSecret,
 	}
 
 	fileServer := http.FileServer(http.Dir(filepathRoot))

@@ -5,7 +5,18 @@ import (
 	"chirpy/internal/database"
 	"encoding/json"
 	"net/http"
+	"time"
+
+	"github.com/google/uuid"
 )
+
+type User struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Email     string    `json:"email"`
+	Token     string    `json:"token"`
+}
 
 func (cfg *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
 	type Params struct {
@@ -52,8 +63,9 @@ func (cfg *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
 
 func (cfg *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 	type Params struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email        string `json:"email"`
+		Password     string `json:"password"`
+		ExpiresInSec int64  `json:"expires_in_seconds"`
 	}
 
 	param := Params{}
@@ -65,6 +77,13 @@ func (cfg *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 	if param.Password == "" {
 		respondWithError(w, http.StatusNotAcceptable, nil, "password feild can't be empty")
 		return
+	}
+
+	var expiryTime time.Duration
+	if param.ExpiresInSec == 0 || param.ExpiresInSec > int64(time.Hour) {
+		expiryTime = time.Hour
+	} else {
+		expiryTime = time.Duration(param.ExpiresInSec)
 	}
 
 	resp, err := cfg.query.LoginUser(r.Context(), param.Email)
@@ -84,11 +103,18 @@ func (cfg *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	token, err := auth.MakeJWT(resp.ID, cfg.jwtSecret, expiryTime)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err, "Failed to generate JWT")
+		return
+	}
+
 	user := User{
 		ID:        resp.ID,
 		CreatedAt: resp.CreatedAt,
 		UpdatedAt: resp.UpdatedAt,
 		Email:     resp.Email,
+		Token:     token,
 	}
 
 	respondWithJSON(w, http.StatusOK, user)
