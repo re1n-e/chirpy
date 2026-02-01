@@ -3,7 +3,6 @@ package auth_test
 import (
 	"chirpy/internal/auth"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -74,7 +73,7 @@ func TestCheckPasswordHash(t *testing.T) {
 
 func TestValidateJWT(t *testing.T) {
 	userID := uuid.New()
-	validToken, _ := auth.MakeJWT(userID, "secret", time.Hour)
+	validToken, _ := auth.MakeJWT(userID, "secret")
 
 	tests := []struct {
 		name        string
