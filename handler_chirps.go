@@ -33,7 +33,7 @@ func (cfg *apiConfig) createChirps(w http.ResponseWriter, r *http.Request) {
 	}
 
 	type Params struct {
-		Body   string `json:"body"`
+		Body string `json:"body"`
 	}
 
 	param := Params{}
@@ -131,3 +131,46 @@ func (cfg *apiConfig) getChirpByChirpId(w http.ResponseWriter, r *http.Request) 
 
 	respondWithJSON(w, http.StatusOK, chirp)
 }
+
+func (cfg *apiConfig) deleteChirp(w http.ResponseWriter, r *http.Request) {
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, 401, err, "Failed to parse jwt token")
+		return
+	}
+
+	userId, err := auth.ValidateJWT(token, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, 401, err, "Failed to validate JWT")
+	}
+
+	value := r.PathValue("chirpID")
+	if value == "" {
+		respondWithError(w, http.StatusBadRequest, nil, "No chirp id provided")
+		return
+	}
+	chirpID, err := uuid.Parse(value)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err, "Faield to parse chirp id")
+		return
+	}
+
+	resp, err := cfg.query.GetChirpById(r.Context(), chirpID)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, err, "Failed to retrive chirp from db")
+		return
+	}
+
+	if resp.UserID != userId {
+		respondWithError(w, http.StatusForbidden, nil, "Unauthorized access to a resource")
+		return
+	}
+
+	if err := cfg.query.DeleteChirpById(r.Context(), chirpID); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err, "Failed to delete chirp")
+		return
+	}
+
+	respondWithJSON(w, 204, nil)
+}
+

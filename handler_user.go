@@ -129,3 +129,65 @@ func (cfg *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 
 	respondWithJSON(w, http.StatusOK, user)
 }
+
+func (cfg *apiConfig) updateUsers(w http.ResponseWriter, r *http.Request) {
+	type Params struct {
+		Password string `json:"password"`
+		Email    string `json:"email"`
+	}
+
+	token, err := auth.GetBearerToken(r.Header)
+
+	if err != nil {
+		respondWithError(w, 401, err, "Failed to get token")
+		return
+	}
+
+	userId, err := auth.ValidateJWT(token, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, 401, err, "Failed to validate JWT")
+		return
+	}
+
+	param := Params{}
+	if err := json.NewDecoder(r.Body).Decode(&param); err != nil {
+		respondWithError(w, http.StatusInternalServerError, err, "Failed to parse params")
+		return
+	}
+
+	if param.Email == "" {
+		respondWithError(w, http.StatusNoContent, nil, "Email fieldl can't be empty")
+		return
+	}
+
+	if param.Password == "" {
+		respondWithError(w, http.StatusNoContent, nil, "Password feild requied")
+		return
+	}
+
+	hashedPassword, err := auth.HashPassword(param.Password)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err, "Failed to hash password")
+		return
+	}
+
+	updatedUser, err := cfg.query.UpdateUser(r.Context(), database.UpdateUserParams{
+		Email:          param.Email,
+		HashedPassword: hashedPassword,
+		ID:             userId,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, err, "Failed to update users")
+		return
+	}
+
+	user := User{
+		ID:        updatedUser.ID,
+		CreatedAt: updatedUser.CreatedAt,
+		UpdatedAt: updatedUser.UpdatedAt,
+		Email:     updatedUser.Email,
+	}
+
+	respondWithJSON(w, http.StatusOK, user)
+}
+
