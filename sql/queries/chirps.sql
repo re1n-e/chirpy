@@ -14,9 +14,20 @@ SELECT *
 FROM chirps
 ORDER BY created_at ASC;
 
+-- name: GetAllChirpsDesc :many
+SELECT *
+FROM chirps
+ORDER BY created_at DESC;
+
 -- name: GetChirpById :one
 SELECT * FROM chirps WHERE id = $1;
 
 -- name: DeleteChirpById :exec
 DELETE FROM chirps
 WHERE id = $1;
+
+-- name: GetChirpsByAuthorId :many
+SELECT * FROM chirps WHERE user_id = $1 ORDER BY created_at ASC;
+
+-- name: GetChirpsByAuthorIdDesc :many
+SELECT * FROM chirps WHERE user_id = $1 ORDER BY created_at DESC;

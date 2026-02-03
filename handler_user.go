@@ -17,6 +17,7 @@ type User struct {
 	Email        string    `json:"email"`
 	Token        string    `json:"token"`
 	RefreshToken string    `json:"refresh_token"`
+	IsChirpyRed  bool      `json:"is_chirpy_red"`
 }
 
 const refreshExpiryTime = 30 * 24 * time.Hour
@@ -55,10 +56,11 @@ func (cfg *apiConfig) createUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := User{
-		ID:        userDb.ID,
-		CreatedAt: userDb.CreatedAt,
-		UpdatedAt: userDb.UpdatedAt,
-		Email:     userDb.Email,
+		ID:          userDb.ID,
+		CreatedAt:   userDb.CreatedAt,
+		UpdatedAt:   userDb.UpdatedAt,
+		Email:       userDb.Email,
+		IsChirpyRed: userDb.IsChirpyRed.Bool,
 	}
 
 	respondWithJSON(w, 201, user)
@@ -125,6 +127,7 @@ func (cfg *apiConfig) loginUser(w http.ResponseWriter, r *http.Request) {
 		Email:        resp.Email,
 		Token:        token,
 		RefreshToken: refreshToken,
+		IsChirpyRed:  resp.IsChirpyRed.Bool,
 	}
 
 	respondWithJSON(w, http.StatusOK, user)
@@ -190,4 +193,3 @@ func (cfg *apiConfig) updateUsers(w http.ResponseWriter, r *http.Request) {
 
 	respondWithJSON(w, http.StatusOK, user)
 }
-

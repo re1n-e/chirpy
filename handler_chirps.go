@@ -86,8 +86,31 @@ func cleanse_chirp(msg string) string {
 }
 
 func (cfg *apiConfig) getChirps(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("author_id")
+	toSort := r.URL.Query().Get("sort")
 	chirps := []Chirp{}
-	resps, err := cfg.query.GetAllChirps(r.Context())
+	var err error
+	var resps []database.Chirp
+
+	if id != "" {
+		var authorId uuid.UUID
+		authorId, err = uuid.Parse(id)
+		if err != nil {
+			respondWithError(w, http.StatusInternalServerError, err, "Failed to parse uuid")
+			return
+		}
+		if toSort == "desc" {
+			resps, err = cfg.query.GetChirpsByAuthorId(r.Context(), authorId)
+		} else {
+			resps, err = cfg.query.GetChirpsByAuthorId(r.Context(), authorId)
+		}
+	} else {
+		if toSort == "desc" {
+			resps, err = cfg.query.GetAllChirpsDesc(r.Context())
+		} else {
+			resps, err = cfg.query.GetAllChirps(r.Context())
+		}
+	}
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, err, "failed to retrive chirps from db")
 	}
@@ -173,4 +196,3 @@ func (cfg *apiConfig) deleteChirp(w http.ResponseWriter, r *http.Request) {
 
 	respondWithJSON(w, 204, nil)
 }
-

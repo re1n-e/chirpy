@@ -17,6 +17,7 @@ type apiConfig struct {
 	query          *database.Queries
 	platform       string
 	jwtSecret      string
+	polkaKey       string
 }
 
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
@@ -46,6 +47,11 @@ func main() {
 
 	platform := os.Getenv("PLATFORM")
 
+	polkaKey := os.Getenv("POLKA_KEY")
+	if polkaKey == "" {
+		log.Fatal("Failed to load polka key")
+	}
+
 	dbQueries := database.New(db)
 
 	mux := http.NewServeMux()
@@ -59,6 +65,7 @@ func main() {
 		query:          dbQueries,
 		platform:       platform,
 		jwtSecret:      jwtSecret,
+		polkaKey:       polkaKey,
 	}
 
 	fileServer := http.FileServer(http.Dir(filepathRoot))
@@ -82,6 +89,7 @@ func main() {
 	mux.HandleFunc("POST /api/revoke", cfg.revokeRefreshToken)
 	mux.HandleFunc("PUT /api/users", cfg.updateUsers)
 	mux.HandleFunc("DELETE  /api/chirps/{chirpID}", cfg.deleteChirp)
+	mux.HandleFunc("POST /api/polka/webhooks", cfg.registerChirpyRed)
 	srv := &http.Server{
 		Addr:    ":" + port,
 		Handler: mux,
